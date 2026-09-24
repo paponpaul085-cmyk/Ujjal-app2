@@ -14,12 +14,11 @@ jobs:
 
       - name: Unzip project
         run: |
-          unzip -q *.zip -d project || true
-          if [ -d project ]; then
-            cd project
-            if [ -d */ ]; then cd */; fi
-          fi
-          echo "Current directory: $(pwd)"
+          unzip -q *.zip -d project
+          cd project
+          if [ -d */ ]; then cd */; fi
+          echo "=== Current directory ==="
+          pwd
           ls -la
 
       - name: Set up JDK 17
@@ -27,21 +26,20 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: Grant permission
+      - name: Build APK
         run: |
-          if [ -f gradlew ]; then chmod +x gradlew; fi
-          if [ -f */gradlew ]; then chmod +x */gradlew; fi
-
-      - name: Build Debug APK
-        run: |
+          cd project
+          if [ -d */ ]; then cd */; fi
+          
+          echo "=== Looking for gradlew ==="
+          find . -name "gradlew" || true
+          
           if [ -f gradlew ]; then
-            ./gradlew assembleDebug
-          elif [ -f */gradlew ]; then
-            cd */ && ./gradlew assembleDebug
+            chmod +x gradlew
+            ./gradlew assembleDebug --no-daemon
           else
-            echo "gradlew not found"
+            echo "gradlew not found!"
             exit 1
           fi
 
@@ -52,3 +50,5 @@ jobs:
           path: |
             **/app/build/outputs/apk/debug/*.apk
             **/build/outputs/apk/debug/*.apk
+            **/*.apk
+          if-no-files-found: warn
