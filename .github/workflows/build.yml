@@ -14,12 +14,12 @@ jobs:
 
       - name: Unzip project
         run: |
-          unzip -q *.zip -d project
-          cd project
-          if [ -d */ ]; then cd */; fi
-          echo "=== Current directory ==="
-          pwd
+          echo "=== Files in root ==="
           ls -la
+          unzip -q *.zip -d project
+          echo "=== After unzip ==="
+          find project -maxdepth 3 -type d
+          find project -name "gradlew" || true
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -29,19 +29,22 @@ jobs:
 
       - name: Build APK
         run: |
-          cd project
-          if [ -d */ ]; then cd */; fi
+          # gradlew যেখানে আছে সেখানে যাও
+          GRADLEW_PATH=$(find project -name "gradlew" | head -n 1)
           
-          echo "=== Looking for gradlew ==="
-          find . -name "gradlew" || true
-          
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug --no-daemon
-          else
-            echo "gradlew not found!"
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "gradlew not found anywhere!"
+            find project -type f | head -50
             exit 1
           fi
+          
+          echo "Found gradlew at: $GRADLEW_PATH"
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Project directory: $PROJECT_DIR"
+          
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
